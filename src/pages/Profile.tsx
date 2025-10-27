@@ -49,9 +49,12 @@ type UserComment = {
 };
 
 
-// ... (Função AuthModal - sem mudança) ...
+// -----------------------------------------------------------------
+// 1. APAGUE O 'AuthModal' ANTIGO DO SEU 'Profile.tsx'
+// 2. COLE ESTE NO LUGAR
+// -----------------------------------------------------------------
+
 function AuthModal({ onLoginSuccess }: { onLoginSuccess: (session: Session) => void }) {
-  // ... (código do modal de login/cadastro intacto)
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [username, setUsername] = useState(""); 
@@ -86,10 +89,6 @@ function AuthModal({ onLoginSuccess }: { onLoginSuccess: (session: Session) => v
       return;
     }
     if (authData.session && authData.user) {
-      // NOTE: Você está inserindo o 'id' do auth? A tabela User parece ter um 'id' serial
-      // Se 'id' não for a foreign key para auth.users, você precisa adicionar
-      // a coluna 'auth_user_id' (uuid) na sua tabela 'User' e linkar aqui.
-      // Por enquanto, vou manter seu código original.
       const { error: profileError } = await supabase
         .from('User')
         .insert({ username: username, Email: normalizedEmail });
@@ -101,6 +100,7 @@ function AuthModal({ onLoginSuccess }: { onLoginSuccess: (session: Session) => v
     setIsSubmitting(false);
   };
 
+  // O 'return' estava faltando os formulários:
   return (
     <DialogContent className="sm:max-w-md">
        <DialogHeader>
@@ -117,12 +117,46 @@ function AuthModal({ onLoginSuccess }: { onLoginSuccess: (session: Session) => v
           <TabsTrigger value="login" className="flex-1">Entrar</TabsTrigger>
           <TabsTrigger value="signup" className="flex-1">Cadastrar</TabsTrigger>
         </TabsList>
+        
+        {/* AQUI ESTÁ O CONTEÚDO QUE FALTAVA */}
         <TabsContent value="login">
-          {/* ... (form login) ... */}
+          <form onSubmit={handleLogin} className="space-y-4 pt-4">
+            <div className="grid gap-2">
+              <Label htmlFor="email-login-profile">Email</Label>
+              <Input id="email-login-profile" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="password-login-profile">Senha</Label>
+              <Input id="password-login-profile" type="password" value={password} onChange={(e) => setPassword(e.target.value)} required />
+            </div>
+            {error && <p className="text-red-500 text-sm">{error}</p>}
+            <Button type="submit" disabled={isSubmitting} className="w-full bg-gradient-primary">
+              {isSubmitting ? "Entrando..." : "Entrar"}
+            </Button>
+          </form>
         </TabsContent>
+        
         <TabsContent value="signup">
-          {/* ... (form signup) ... */}
+          <form onSubmit={handleSignUp} className="space-y-4 pt-4">
+            <div className="grid gap-2">
+              <Label htmlFor="username-signup-profile">Username</Label>
+              <Input id="username-signup-profile" type="text" value={username} onChange={(e) => setUsername(e.target.value)} required />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="email-signup-profile">Email</Label>
+              <Input id="email-signup-profile" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="password-signup-profile">Senha</Label>
+              <Input id="password-signup-profile" type="password" value={password} onChange={(e) => setPassword(e.target.value)} required />
+            </div>
+            {error && <p className="text-red-500 text-sm">{error}</p>}
+            <Button type="submit" disabled={isSubmitting} className="w-full bg-gradient-primary">
+              {isSubmitting ? "Criando conta..." : "Cadastrar"}
+            </Button>
+          </form>
         </TabsContent>
+        
       </Tabs>
     </DialogContent>
   );
