@@ -1,4 +1,12 @@
-@import 'leaflet/dist/leaflet.css';
+/* BOA PRÁTICA: Mova este import do seu CSS para seu arquivo JS/TS principal 
+  (ex: main.tsx ou App.tsx). Isso dá ao seu 'bundler' (Vite/Next) 
+  mais controle sobre a ordem de carregamento.
+
+  Em 'main.tsx' (ou App.tsx), adicione:
+  import 'leaflet/dist/leaflet.css';
+*/
+/* @import 'leaflet/dist/leaflet.css'; */
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -7,11 +15,10 @@
 
 @layer base {
   :root {
-    /* Base - Light theme (fallback) */
-    --background: 210 20% 98%;
-    --foreground: 215 25% 15%;
-
-    /* AutoSocial color palette - tons quentes */
+    /* ---------------------------------------------- */
+    /* 1. PALETA DE CORES BRUTA (COMPARTILHADA)
+    /* ---------------------------------------------- */
+    /* Essas são suas cores base, usadas por ambos os temas */
     --orange: 25 100% 50%;
     --orange-dark: 25 100% 40%;
     --orange-glow: 25 100% 60%;
@@ -21,56 +28,71 @@
     --carbon-black: 215 25% 8%;
     --carbon-gray: 215 15% 15%;
     --metallic-silver: 210 15% 85%;
-    --neon-accent: 45 100% 60%; /* dourado quente para detalhes */
+    --neon-accent: 45 100% 60%;
 
-    /* Theme colors */
+    /* ---------------------------------------------- */
+    /* 2. SEMÂNTICA COMPARTILHADA
+    /* ---------------------------------------------- */
+    /* Variáveis que são IGUAIS nos temas claro e escuro.
+       Não há necessidade de redefini-las no .dark */
     --primary: 25 100% 50%;
     --primary-foreground: 210 40% 98%;
     --primary-glow: 25 100% 60%;
 
-    --secondary: 215 15% 20%;
-    --secondary-foreground: 210 40% 98%;
-
-    --accent: 35 100% 55%; /* dourado/âmbar */
+    --accent: 35 100% 55%;
     --accent-foreground: 210 40% 98%;
 
     --muted: 25 100% 45%;
     --muted-foreground: 215 15% 65%;
 
-    --card: 215 25% 12%;
-    --card-foreground: 210 40% 98%;
-
-    --popover: 215 25% 12%;
-    --popover-foreground: 210 40% 98%;
-
-    --border: 215 15% 25%;
-    --input: 215 15% 20%;
-    --ring: 25 100% 50%;
-
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 210 40% 98%;
 
-    /* === Gradientes quentes e metálicos === */
+    --ring: 25 100% 50%;
+    --radius: 12px;
+
+    /* ---------------------------------------------- */
+    /* 3. EFEITOS ESPECIAIS (COMPARTILHADOS)
+    /* ---------------------------------------------- */
     --gradient-primary: linear-gradient(135deg, hsl(25 100% 55%), hsl(15 100% 35%));
     --gradient-accent: linear-gradient(135deg, hsl(var(--red-hot)), hsl(var(--red-dark)));
     --gradient-amber: linear-gradient(135deg, hsl(var(--amber)), hsl(var(--orange-dark)));
     --gradient-dark: linear-gradient(180deg, hsl(var(--carbon-black)), hsl(var(--carbon-gray)));
     --gradient-subtle: linear-gradient(180deg, hsl(215 25% 8%), hsl(215 20% 12%));
 
-    /* === Sombras e efeitos === */
     --shadow-racing: 0 10px 30px -10px hsl(var(--orange) / 0.3);
     --shadow-glow: 0 0 40px hsl(var(--orange-glow) / 0.25);
     --shadow-card: 0 8px 32px -8px hsl(25 100% 20% / 0.4);
 
-    /* === Animações === */
     --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     --transition-bounce: all 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+    
+    /* ---------------------------------------------- */
+    /* 4. TEMA CLARO (DEFAULT / FALLBACK)
+    /* ---------------------------------------------- */
+    /* Estas são as variáveis que MUDAM para o tema claro */
+    --background: 210 20% 98%;
+    --foreground: 215 25% 15%;
 
-    --radius: 12px;
+    --card: 210 20% 100%; /* (ex: branco) */
+    --card-foreground: 215 25% 15%;
+
+    --popover: 210 20% 100%;
+    --popover-foreground: 215 25% 15%;
+
+    --secondary: 210 15% 95%; /* (ex: cinza claro) */
+    --secondary-foreground: 215 25% 15%;
+    
+    --border: 210 15% 90%;
+    --input: 210 15% 95%;
   }
 
   .dark {
-    /* Dark theme - padrão para AutoSocial */
+    /* ---------------------------------------------- */
+    /* 5. TEMA ESCURO (OVERRIDE)
+    /* ---------------------------------------------- */
+    /* CORREÇÃO: Apenas as variáveis que REALMENTE MUDAM 
+       precisam ser listadas aqui. */
     --background: 215 25% 8%;
     --foreground: 210 40% 98%;
 
@@ -80,55 +102,53 @@
     --popover: 215 25% 12%;
     --popover-foreground: 210 40% 98%;
 
-    --primary: 25 100% 50%;
-    --primary-foreground: 210 40% 98%;
-
     --secondary: 215 15% 20%;
     --secondary-foreground: 210 40% 98%;
 
-    --muted: 25 100% 45%;
-    --muted-foreground: 215 15% 65%;
-
-    --accent: 35 100% 55%;
-    --accent-foreground: 210 40% 98%;
-
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 210 40% 98%;
-
     --border: 215 15% 25%;
     --input: 215 15% 20%;
-    --ring: 25 100% 50%;
   }
 }
 
 @layer base {
-  * {
-    @apply border-border;
-  }
-
+  /* REMOVIDO: A regra '* { @apply border-border; }' foi removida.
+    
+    MOTIVO: É uma regra muito "agressiva". É mais consistente e 
+    seguro aplicar classes de borda (ex: 'border', 'border-border', 
+    'border-orange-500') diretamente nos componentes (HTML/JSX)
+    que precisam delas, seguindo a filosofia utility-first.
+  */
+  
   body {
     @apply bg-background text-foreground font-sans antialiased;
+    /* Adiciona um overscroll suave */
+    overscroll-behavior: none;
   }
 
-  /* Scrollbar customizada */
+  /* Scrollbar customizada (Seu código está ótimo aqui) */
   ::-webkit-scrollbar {
     width: 6px;
+    height: 6px; /* Adicionado para scroll horizontal */
   }
 
   ::-webkit-scrollbar-track {
-    @apply bg-muted;
+    /* Usei uma cor base do seu tema para o trilho */
+    @apply bg-carbon-black;
   }
 
   ::-webkit-scrollbar-thumb {
+    /* Usei --border, que é semanticamente correto */
     @apply bg-border rounded-full;
   }
 
   ::-webkit-scrollbar-thumb:hover {
+    /* Usei uma cor mais clara para o hover */
     @apply bg-muted-foreground;
   }
 }
 
 /* === Utilitários visuais === */
+/* (Esta seção está perfeita, sem alterações) */
 @layer utilities {
   /* Botão metálico laranja */
   .btn-metal {
