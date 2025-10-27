@@ -32,7 +32,7 @@ type UserProfile = {
   is_premium?: boolean;
 };
 
-type UserPost = {
+type User = {
   id: number;
   carImage: string;
   carTitle: string;
@@ -42,7 +42,7 @@ type UserComment = {
   id: number;
   body: string;
   created_at: string;
-  post: {
+  : {
     id: number;
     carTitle: string;
   } | null;
@@ -176,7 +176,7 @@ export default function Profile() {
   const [isAuthLoading, setIsAuthLoading] = useState(true);
   
   const [profileUser, setProfileUser] = useState<UserProfile | null>(null); 
-  const [userPosts, setUserPosts] = useState<UserPost[]>([]);
+  const [users, setUsers] = useState<User[]>([]);
   const [userComments, setUserComments] = useState<UserComment[]>([]);
 
   // NOVO: Estados de Contagem
@@ -323,18 +323,18 @@ export default function Profile() {
   }, [username, currentUserProfile, isAuthLoading, navigate]); // Depende do perfil logado
 
 
-  // Efeito 3: Buscar os posts (sem mudança)
+  // Efeito 3: Buscar os s (sem mudança)
   useEffect(() => {
     if (!profileUser) return;
-    async function fetchUserPosts() {
+    async function fetchUsers() {
       const { data, error } = await supabase
-        .from('Posts')
+        .from('s')
         .select('id, carTitle:carTitle, carImage:carImage')
         .eq('user_id', profileUser.id);
-      if (error) console.error('Erro ao buscar posts:', error.message);
-      else if (data) setUserPosts(data as any);
+      if (error) console.error('Erro ao buscar s:', error.message);
+      else if (data) setUsers(data as any);
     }
-    fetchUserPosts();
+    fetchUsers();
   }, [profileUser]);
 
   // Efeito 4: Buscar os comentários (sem mudança)
@@ -342,8 +342,8 @@ export default function Profile() {
     if (!profileUser) return;
     async function fetchUserComments() {
       const { data, error } = await supabase
-        .from('post_comments')
-        .select(`id, body, created_at, post:post_id (id, carTitle)`)
+        .from('_comments')
+        .select(`id, body, created_at, :_id (id, carTitle)`)
         .eq('user_id', profileUser.id)
         .order('created_at', { ascending: false });
       if (error) console.error('Erro ao buscar comentários:', error.message);
@@ -488,7 +488,7 @@ export default function Profile() {
               <p className="text-sm text-muted-foreground">Seguindo</p>
             </div>
             <div>
-              <p className="text-xl font-bold">{userPosts.length}</p>
+              <p className="text-xl font-bold">{users.length}</p>
               <p className="text-sm text-muted-foreground">Posts</p>
             </div>
           </div>
@@ -556,7 +556,7 @@ export default function Profile() {
                 userPosts.map((post) => (
                   <div 
                     key={post.id}
-                    onClick={() => navigate(`/post/${post.id}`)} // <-- CORREÇÃO (usando /post/ e não /posts/)
+                    onClick={() => navigate(`/posts/${post.id}`)} // <-- CORREÇÃO (usando /post/ e não /posts/)
                     className="relative aspect-square rounded-lg overflow-hidden cursor-pointer group"
                   >
                     <img 
