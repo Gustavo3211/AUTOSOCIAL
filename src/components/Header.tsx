@@ -8,7 +8,7 @@ interface HeaderProps {
   showMenu?: boolean;
 }
 
-export const Header = ({ title, showBack = false, showMenu = true }: HeaderProps) => {
+export const Header = ({ title, showBack = true, showMenu = false, }: HeaderProps) => {
   const navigate = useNavigate();
 
   return (
@@ -28,7 +28,7 @@ export const Header = ({ title, showBack = false, showMenu = true }: HeaderProps
           {title ? (
             <h1 className="text-xl font-bold">{title}</h1>
           ) : (
-            <h1 className="text-2xl font-bold bg-gradient-primary bg-clip-text text-transparent">
+            <h1 className="text-2xl font-bold bg-gradient-amber bg-clip-text text-transparent drop-shadow-[0_0_10px_hsl(25_100%_50%_/0.4)]">
               AutoGRID
             </h1>
           )}

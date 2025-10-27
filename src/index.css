@@ -1,10 +1,9 @@
+@import 'leaflet/dist/leaflet.css';
 @tailwind base;
 @tailwind components;
-
 @tailwind utilities;
-@import 'leaflet/dist/leaflet.css';
-/* ... resto do seu CSS ... */
-/* AutoGRID Design System - Modern Dark Theme with Orange Accent */
+
+/* AutoGRID Design System - Dark Theme com tons laranja e vermelho */
 
 @layer base {
   :root {
@@ -12,16 +11,17 @@
     --background: 210 20% 98%;
     --foreground: 215 25% 15%;
 
-    /* AutoGRID color palette */
+    /* AutoSocial color palette - tons quentes */
     --orange: 25 100% 50%;
     --orange-dark: 25 100% 40%;
     --orange-glow: 25 100% 60%;
-    --electric-blue: 200 100% 50%;
-    --electric-blue-dark: 200 100% 40%;
+    --amber: 35 100% 55%;
+    --red-hot: 0 100% 55%;
+    --red-dark: 0 100% 35%;
     --carbon-black: 215 25% 8%;
     --carbon-gray: 215 15% 15%;
     --metallic-silver: 210 15% 85%;
-    --neon-accent: 84 100% 50%;
+    --neon-accent: 45 100% 60%; /* dourado quente para detalhes */
 
     /* Theme colors */
     --primary: 25 100% 50%;
@@ -31,10 +31,10 @@
     --secondary: 215 15% 20%;
     --secondary-foreground: 210 40% 98%;
 
-    --accent: 200 100% 50%;
+    --accent: 35 100% 55%; /* dourado/âmbar */
     --accent-foreground: 210 40% 98%;
 
-    --muted: 0 100% 39.4%;
+    --muted: 25 100% 45%;
     --muted-foreground: 215 15% 65%;
 
     --card: 215 25% 12%;
@@ -45,23 +45,24 @@
 
     --border: 215 15% 25%;
     --input: 215 15% 20%;
-    --ring: 0 85% 60%;
+    --ring: 25 100% 50%;
 
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 210 40% 98%;
 
-    /* Gradients */
-    --gradient-primary: linear-gradient(135deg, hsl(var(--orange)), hsl(var(--orange-dark)));
-    --gradient-accent: linear-gradient(135deg, hsl(var(--electric-blue)), hsl(var(--electric-blue-dark)));
+    /* === Gradientes quentes e metálicos === */
+    --gradient-primary: linear-gradient(135deg, hsl(25 100% 55%), hsl(15 100% 35%));
+    --gradient-accent: linear-gradient(135deg, hsl(var(--red-hot)), hsl(var(--red-dark)));
+    --gradient-amber: linear-gradient(135deg, hsl(var(--amber)), hsl(var(--orange-dark)));
     --gradient-dark: linear-gradient(180deg, hsl(var(--carbon-black)), hsl(var(--carbon-gray)));
     --gradient-subtle: linear-gradient(180deg, hsl(215 25% 8%), hsl(215 20% 12%));
 
-    /* Shadows and effects */
+    /* === Sombras e efeitos === */
     --shadow-racing: 0 10px 30px -10px hsl(var(--orange) / 0.3);
-    --shadow-glow: 0 0 40px hsl(var(--orange-glow) / 0.2);
-    --shadow-card: 0 8px 32px -8px hsl(215 25% 8% / 0.5);
+    --shadow-glow: 0 0 40px hsl(var(--orange-glow) / 0.25);
+    --shadow-card: 0 8px 32px -8px hsl(25 100% 20% / 0.4);
 
-    /* Animations */
+    /* === Animações === */
     --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     --transition-bounce: all 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55);
 
@@ -69,7 +70,7 @@
   }
 
   .dark {
-    /* Dark theme is the default for AutoGRID */
+    /* Dark theme - padrão para AutoSocial */
     --background: 215 25% 8%;
     --foreground: 210 40% 98%;
 
@@ -85,10 +86,10 @@
     --secondary: 215 15% 20%;
     --secondary-foreground: 210 40% 98%;
 
-    --muted: 0 100% 39.4%;
+    --muted: 25 100% 45%;
     --muted-foreground: 215 15% 65%;
 
-    --accent: 200 100% 50%;
+    --accent: 35 100% 55%;
     --accent-foreground: 210 40% 98%;
 
     --destructive: 0 84.2% 60.2%;
@@ -97,7 +98,6 @@
     --border: 215 15% 25%;
     --input: 215 15% 20%;
     --ring: 25 100% 50%;
-
   }
 }
 
@@ -110,7 +110,7 @@
     @apply bg-background text-foreground font-sans antialiased;
   }
 
-  /* Custom scrollbar */
+  /* Scrollbar customizada */
   ::-webkit-scrollbar {
     width: 6px;
   }
@@ -125,5 +125,66 @@
 
   ::-webkit-scrollbar-thumb:hover {
     @apply bg-muted-foreground;
+  }
+}
+
+/* === Utilitários visuais === */
+@layer utilities {
+  /* Botão metálico laranja */
+  .btn-metal {
+    background: var(--gradient-primary);
+    color: white;
+    box-shadow: 0 4px 14px hsl(25 100% 35% / 0.4);
+    border-radius: var(--radius);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+  }
+
+  .btn-metal:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 18px hsl(25 100% 40% / 0.5);
+  }
+
+  /* Botão gradiente vermelho */
+  .bg-gradient-red {
+    background: var(--gradient-accent);
+    color: white;
+    transition: var(--transition-smooth);
+  }
+
+  .bg-gradient-red:hover {
+    filter: brightness(1.1);
+    box-shadow: 0 0 12px hsl(0 100% 50% / 0.4);
+  }
+
+  /* Cards com profundidade */
+  .card-hover {
+    background: var(--card);
+    box-shadow: var(--shadow-card);
+    transition: var(--transition-smooth);
+    border-radius: var(--radius);
+  }
+
+  .card-hover:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 10px 40px hsl(25 100% 35% / 0.3);
+  }
+
+  /* Glow automotivo */
+  .glow-orange {
+    box-shadow: 0 0 10px hsl(25 100% 55% / 0.4);
+  }
+
+  /* Animação de entrada */
+  .fade-in {
+    opacity: 0;
+    transform: translateY(10px);
+    animation: fadeInUp 0.6s ease forwards;
+  }
+
+  @keyframes fadeInUp {
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
   }
 }

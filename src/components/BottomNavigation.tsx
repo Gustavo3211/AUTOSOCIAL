@@ -1,6 +1,6 @@
-import { Home, Calendar, Plus, ShoppingBag, User, Search, CarFront } from "lucide-react";
+import { Home, Car, PlusCircle, Search, UserRound } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { useState, useEffect } from "react"; // Importe useEffect
+import { useState, useEffect } from "react";
 import { CreatePostModal } from "./CreatePostModal";
 import { supabase } from "@/superbase";
 
@@ -12,83 +12,66 @@ interface NavigationItem {
 }
 
 const navigationItems: NavigationItem[] = [
-  { icon: Home, label: "Home", path: "/" },
-  { icon: CarFront, label: "Carros", path: "/eventos" }, //shorts carros 
-  { icon: Plus, label: "Criar", isCreate: true },
-  { icon: Search, label: "Pesquisar", path: "/marketplace" },// pesquisa
-  { icon: User, label: "Perfil", path: "/perfil" }, 
+  { icon: Home, label: "Início", path: "/" },
+  { icon: Car, label: "Garagem", path: "/eventos" },
+  { icon: PlusCircle, label: "Postar", isCreate: true },
+  { icon: Search, label: "Explorar", path: "/marketplace" },
+  { icon: UserRound, label: "Perfil", path: "/perfil" },
 ];
 
-// --- REMOVIDO: A prop currentUserProfileId não é mais necessária ---
-// interface BottomNavigationProps {
-//   currentUserProfileId: number | null;
-// }
-
-export const BottomNavigation = () => { // Removido 'currentUserProfileId' das props
+export const BottomNavigation = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const [createModalOpen, setCreateModalOpen] = useState(false);
-  
-  // --- 2. Novos estados para Auth e ID do Perfil ---
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [localCurrentUserProfileId, setLocalCurrentUserProfileId] = useState<number | null>(null);
 
-  // --- 3. useEffect para buscar a sessão e o ID do perfil ---
+  // 🔐 Autenticação
   useEffect(() => {
     async function checkAuthAndProfile() {
       const { data: { session } } = await supabase.auth.getSession();
-      
       if (session?.user?.email) {
-        // Usuário está logado
         setIsLoggedIn(true);
-        // Busca o ID do perfil na tabela "User"
         const { data: profile } = await supabase
-          .from('User')
-          .select('id')
-          .eq('Email', session.user.email.toLowerCase())
+          .from("User")
+          .select("id")
+          .eq("Email", session.user.email.toLowerCase())
           .single();
-        if (profile) {
-          setLocalCurrentUserProfileId(profile.id);
-        } else {
-          setLocalCurrentUserProfileId(null); // Perfil não encontrado (Limbo?)
-        }
+        if (profile) setLocalCurrentUserProfileId(profile.id);
       } else {
-        // Usuário não está logado
         setIsLoggedIn(false);
         setLocalCurrentUserProfileId(null);
       }
     }
     checkAuthAndProfile();
-    
-    // Opcional: Ouvir mudanças no Auth para atualizar em tempo real
+
     const { data: authListener } = supabase.auth.onAuthStateChange((_event, session) => {
-        if (session?.user?.email) {
-            setIsLoggedIn(true);
-            // Rebuscar o ID se o usuário acabou de logar
-             supabase.from('User').select('id').eq('Email', session.user.email.toLowerCase()).single().then(({data}) => {
-                if(data) setLocalCurrentUserProfileId(data.id);
-             });
-        } else {
-            setIsLoggedIn(false);
-            setLocalCurrentUserProfileId(null);
-        }
+      if (session?.user?.email) {
+        setIsLoggedIn(true);
+        supabase
+          .from("User")
+          .select("id")
+          .eq("Email", session.user.email.toLowerCase())
+          .single()
+          .then(({ data }) => {
+            if (data) setLocalCurrentUserProfileId(data.id);
+          });
+      } else {
+        setIsLoggedIn(false);
+        setLocalCurrentUserProfileId(null);
+      }
     });
 
     return () => {
       authListener?.subscription.unsubscribe();
     };
+  }, []);
 
-  }, []); // Roda uma vez ao montar
-
-  // --- 4. Modifique a função handleNavigation ---
+  // Navegação
   const handleNavigation = (item: NavigationItem) => {
     if (item.isCreate) {
-      // Verifica o estado local 'isLoggedIn'
-      if (isLoggedIn) {
-        setCreateModalOpen(true); // Se sim, abre o modal de criar post
-      } else {
-        navigate("/perfil"); // Se não, navega para /perfil (que abrirá o login)
-      }
+      if (isLoggedIn) setCreateModalOpen(true);
+      else navigate("/perfil");
     } else if (item.path) {
       navigate(item.path);
     }
@@ -96,36 +79,48 @@ export const BottomNavigation = () => { // Removido 'currentUserProfileId' das p
 
   return (
     <>
-      <nav className="fixed bottom-0 left-0 right-0 bg-card/95 backdrop-blur-md border-t border-border z-50">
+      {/* 🔻 Barra inferior translúcida com reflexo metálico */}
+      <nav className="fixed bottom-0 left-0 right-0 bg-gradient-to-t from-black/90 via-carbon-gray/80 to-carbon-gray/50 backdrop-blur-md border-t border-orange-500/30 shadow-[0_-2px_25px_hsl(25_100%_40%_/_0.25)] z-50">
         <div className="flex items-center justify-around px-2 py-2 max-w-lg mx-auto">
           {navigationItems.map((item, index) => {
             const Icon = item.icon;
-            const isActive = item.path === location.pathname; 
+            const isActive = item.path === location.pathname;
             const isCreate = item.isCreate;
-            
+
             return (
               <button
                 key={index}
                 onClick={() => handleNavigation(item)}
-                className={`flex flex-col items-center transition-all duration-300 ${
-                  isCreate 
-                    ? "p-0 -mt-6" 
-                    : "p-3 rounded-xl"
+                className={`relative flex flex-col items-center transition-all duration-300 ${
+                  isCreate ? "p-0" : "p-3 rounded-xl"
                 } ${
                   isActive
-                    ? "text-primary bg-primary/10"
-                    : isCreate ? "text-muted-foreground hover:text-foreground" 
-                    : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
+                    ? "text-amber-400"
+                    : "text-muted-foreground hover:text-foreground hover:scale-105"
                 }`}
               >
                 {isCreate ? (
-                  <div className="h-14 w-14 rounded-full bg-gradient-primary flex items-center justify-center shadow-glow hover:scale-110 transition-transform">
-                    <Icon className="h-6 w-6 text-white" />
+                  // 🚀 Botão central flutuante com gradiente vermelho-âmbar
+                  <div className="relative flex items-center justify-center -mt-7">
+                    <div className="h-16 w-16 rounded-full bg-gradient-to-br from-red-600 via-orange-500 to-amber-400 flex items-center justify-center shadow-[0_4px_25px_hsl(20_100%_50%_/_0.6)] hover:shadow-[0_0_25px_hsl(20_100%_60%_/_0.8)] hover:scale-110 active:scale-95 transition-all duration-300 border border-amber-300/30">
+                      <Icon className="h-7 w-7 text-white drop-shadow-[0_0_6px_hsl(0_0%_100%_/_0.4)]" />
+                    </div>
+                    <span className="absolute -bottom-6 text-xs text-amber-300 font-medium">Postar</span>
                   </div>
                 ) : (
                   <>
-                    <Icon className="h-5 w-5 mb-1" />
-                    <span className="text-xs font-medium">{item.label}</span>
+                    <Icon
+                      className={`h-5 w-5 mb-1 ${
+                        isActive ? "text-amber-400 drop-shadow-[0_0_6px_hsl(35_100%_60%_/_0.6)]" : ""
+                      }`}
+                    />
+                    <span
+                      className={`text-xs font-semibold tracking-wide ${
+                        isActive ? "text-amber-400" : "text-muted-foreground"
+                      }`}
+                    >
+                      {item.label}
+                    </span>
                   </>
                 )}
               </button>
@@ -134,12 +129,11 @@ export const BottomNavigation = () => { // Removido 'currentUserProfileId' das p
         </div>
       </nav>
 
-      {/* --- 5. Passe o localCurrentUserProfileId para o CreatePostModal --- */}
-      {/* O Modal ainda precisa saber o ID para criar o post */}
-      <CreatePostModal 
-        open={createModalOpen} 
+      {/* 📤 Modal de criação de post */}
+      <CreatePostModal
+        open={createModalOpen}
         onOpenChange={setCreateModalOpen}
-        currentUserProfileId={localCurrentUserProfileId} 
+        currentUserProfileId={localCurrentUserProfileId}
       />
     </>
   );

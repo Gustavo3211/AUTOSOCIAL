@@ -377,7 +377,7 @@ export default function Profile() {
             )}
           </div>
 
-          <h1 className="text-2xl font-bold mb-2">{profileUser.username}</h1>
+          <h1 className="text-2xl font-bold mb-2 text-white">{profileUser.username}</h1>
           
           {/* Stats */}
           <div className="flex items-center gap-6 mb-4">
@@ -399,13 +399,15 @@ export default function Profile() {
           <div className="flex gap-3 w-full max-w-xs mb-4">
             {isOwnProfile ? (
               <>
-                <Button variant="outline" className="flex-1">
+                <Button variant="outline" className="flex-1 bg-gradient-primary"
+                >
                   Editar Perfil
                 </Button>
                 <Button 
                   variant="outline" 
                   size="sm" // 'sm' (small) deixa o botão menor
                   onClick={handleLogout}
+                  className="flex-1 bg-gradient-accent"
                 >
                   Sair
                 </Button>
@@ -451,16 +453,16 @@ export default function Profile() {
         {/* Tabs */}
         <Tabs defaultValue="posts" className="w-full">
           <TabsList className="w-full">
-            <TabsTrigger value="posts" className="flex-1">
+            <TabsTrigger value="posts" className="flex-1 text-black">
               <Flame className="h-4 w-4 mr-2" />
               Posts
             </TabsTrigger>
-            <TabsTrigger value="forum" className="flex-1">
+            <TabsTrigger value="forum" className="flex-1 text-black">
               <MessageSquare className="h-4 w-4 mr-2" />
               Fórum
             </TabsTrigger>
             {isOwnProfile && (
-              <TabsTrigger value="saved" className="flex-1">
+              <TabsTrigger value="saved" className="flex-1 text-black">
                 <Bookmark className="h-4 w-4 mr-2" />
                 Salvos
               </TabsTrigger>
