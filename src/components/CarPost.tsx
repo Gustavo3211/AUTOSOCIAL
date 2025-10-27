@@ -6,7 +6,7 @@ import { Heart, MessageCircle, Share2, MoreHorizontal, Check } from "lucide-reac
 // 2. Importe MouseEvent, useNavigate e useState
 import { useState, useEffect, MouseEvent } from "react";
 import { useNavigate } from "react-router-dom";
-import { supabase } from "@/superbase";
+import { supabase } from "@/supabase";
 
 interface CarPostProps {
   id: number;
@@ -76,8 +76,9 @@ export const CarPost = ({
         .eq("id", id)
         .single();
       if (!error && data?.User) {
-        setUsername((data.User as any).username); // Ajuste de tipo
-        setUserAvatar((data.User as any).avatar_url); // Busca o avatar tbm
+        const user = data.User as { username: string; avatar_url?: string };
+        setUsername(user.username);
+        setUserAvatar(user.avatar_url || "");
       } else {
         console.error("Erro ao buscar usuário do post:", error?.message);
       }

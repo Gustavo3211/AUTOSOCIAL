@@ -16,7 +16,7 @@ import L from 'leaflet';
 import iconUrl from 'leaflet/dist/images/marker-icon.png';
 import iconShadow from 'leaflet/dist/images/marker-shadow.png';
 
-let DefaultIcon = L.icon({
+const DefaultIcon = L.icon({
     iconUrl,
     shadowUrl: iconShadow,
     iconAnchor: [12, 41], // Ponto correto do ícone

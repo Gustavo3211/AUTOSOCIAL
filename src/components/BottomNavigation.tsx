@@ -2,7 +2,7 @@ import { Home, Car, PlusCircle, Search, UserRound } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useState, useEffect } from "react";
 import { CreatePostModal } from "./CreatePostModal";
-import { supabase } from "@/superbase";
+import { supabase } from "@/supabase";
 
 interface NavigationItem {
   icon: React.ComponentType<{ className?: string }>;

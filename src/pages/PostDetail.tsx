@@ -10,7 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Heart, MessageCircle, Share2, Send, Settings, X } from "lucide-react"; // Adicionado X
 import { BottomNavigation } from "@/components/BottomNavigation";
-import { supabase } from "@/superbase"; // (atenção: 'superbase' ou 'supabase'?)
+import { supabase } from "@/supabase"; // (atenção: 'superbase' ou 'supabase'?)
 
 type UserSlim = {
   username: string;
@@ -78,14 +78,14 @@ useEffect(() => {
   useEffect(() => {
     async function getUserProfile() {
       const { data: sessionData } = await supabase.auth.getSession();
-      const session = (sessionData as any)?.session;
+      const session = sessionData?.session;
       if (session?.user?.email) {
         const { data: profile } = await supabase
           .from("User")
           .select("id")
           .ilike("Email", session.user.email) 
           .single();
-        if (profile) setCurrentUserProfileId((profile as any).id);
+        if (profile) setCurrentUserProfileId(profile.id as number);
       }
       setIsAuthLoading(false);
     }
@@ -118,7 +118,16 @@ useEffect(() => {
     }
     const commentMap = new Map<number, CommentData>();
     const parentComments: CommentData[] = [];
-    const allComments: CommentData[] = (data as any[]).map((c: any) => {
+    type DbComment = {
+      id: number;
+      created_at: string;
+      body?: string;
+      content?: string;
+      parent_comment_id?: number | null;
+      User: { username: string; avatar_url?: string } | null;
+    };
+
+    const allComments: CommentData[] = (data as DbComment[]).map((c) => {
       const normalizedUser = normalizeRelation<{ username: string; avatar_url?: string }>(c.User);
       return {
         id: Number(c.id),

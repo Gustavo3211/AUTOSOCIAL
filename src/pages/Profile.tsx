@@ -19,7 +19,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent } from "@/components/ui/card";
-import { supabase } from "@/superbase";
+import { supabase } from "@/supabase";
 
 
 // ... (Tipos UserProfile, UserPost, UserComment - sem mudança) ...
@@ -332,7 +332,7 @@ export default function Profile() {
         .select('id, carTitle:carTitle, carImage:carImage')
         .eq('user_id', profileUser.id);
       if (error) console.error('Erro ao buscar posts:', error.message);
-      else if (data) setUserPosts(data as any);
+      else if (data) setUserPosts(data as UserPost[]);
     }
     fetchUserPosts();
   }, [profileUser]);
@@ -347,7 +347,7 @@ export default function Profile() {
         .eq('user_id', profileUser.id)
         .order('created_at', { ascending: false });
       if (error) console.error('Erro ao buscar comentários:', error.message);
-      else if (data) setUserComments(data as any);
+      else if (data) setUserComments(data as UserComment[]);
     }
     fetchUserComments();
   }, [profileUser]);

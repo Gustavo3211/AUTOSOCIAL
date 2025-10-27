@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Search } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { BottomNavigation } from "@/components/BottomNavigation";
-import { supabase } from "@/superbase";
+import { supabase } from "@/supabase";
 import { useNavigate } from "react-router-dom";
 
 type DbCategory = {
@@ -32,22 +32,6 @@ type Posts = {
 
 export default function Marketplace() {
   const [currentUserProfileId, setCurrentUserProfileId] = useState<number | null>(null);
-
-useEffect(() => {
-  async function getUserProfile() {
-    const { data: { session } } = await supabase.auth.getSession();
-    if (session?.user?.email) {
-      const { data: profile } = await supabase
-        .from("User")
-        .select("id")
-        .eq("Email", session.user.email.toLowerCase())
-        .single();
-      if (profile) setCurrentUserProfileId(profile.id);
-    }
-  }
-  getUserProfile();
-}, []);
-
   const [posts, setPosts] = useState<Posts[]>([]);
   const [loadingPosts, setLoadingPosts] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
@@ -56,20 +40,28 @@ useEffect(() => {
   const { toast } = useToast();
   const navigate = useNavigate();
 
-  // ✅ Buscar categorias
   useEffect(() => {
-    async function fetchCategories() {
-      const { data, error } = await supabase.from("Category").select("*");
-      if (error) {
-        console.error("Erro ao buscar categorias:", error.message);
-      } else if (data) {
-        setDbCategories(data);
+    async function loadInitialData() {
+      const [sessionResult, categoriesResult] = await Promise.all([
+        supabase.auth.getSession(),
+        supabase.from("Category").select("*")
+      ]);
+
+      if (sessionResult.data?.session?.user?.email) {
+        const { data: profile } = await supabase
+          .from("User")
+          .select("id")
+          .eq("Email", sessionResult.data.session.user.email.toLowerCase())
+          .single();
+        if (profile) setCurrentUserProfileId(profile.id);
       }
+
+      if (categoriesResult.data) setDbCategories(categoriesResult.data);
+      if (categoriesResult.error) console.error("Erro ao buscar categorias:", categoriesResult.error.message);
     }
-    fetchCategories();
+    loadInitialData();
   }, []);
 
-  // ✅ Buscar posts com filtros
   useEffect(() => {
     async function fetchPosts() {
       setLoadingPosts(true);
@@ -79,7 +71,8 @@ useEffect(() => {
         .select(
           "id, created_at, description, like, comments, carTitle, carImage, carSpecs, User(username), Category(title)"
         )
-        .order("created_at", { ascending: false });
+        .order("created_at", { ascending: false })
+        .limit(20);
 
       if (selectedCategory !== null) query = query.eq("category", selectedCategory);
 

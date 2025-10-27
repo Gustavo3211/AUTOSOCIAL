@@ -7,7 +7,7 @@ import { CreatePostModal } from "@/components/CreatePostModal";
 import { useEffect, useState, MouseEvent } from "react";
 import { Button } from "@/components/ui/button";
 import { X } from "lucide-react";
-import { supabase } from "@/superbase";
+import { supabase } from "@/supabase";
 import { useNavigate } from "react-router-dom";
 
 // ... (Tipos Posts e DbCategory permanecem iguais) ...
@@ -41,55 +41,47 @@ const Index = () => {
 
   const navigate = useNavigate();
 
-  // --- Auth ---
-  // (Seu useEffect de Auth permanece igual)
   useEffect(() => {
-    async function getUserProfile() {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (session?.user && session.user.email) {
-        // CORREÇÃO DE BUG (da outra vez): Use .ilike() para email
+    async function loadInitialData() {
+      const [sessionResult, categoriesResult] = await Promise.all([
+        supabase.auth.getSession(),
+        supabase.from("Category").select("*")
+      ]);
+
+      if (sessionResult.data?.session?.user?.email) {
         const { data: profile } = await supabase
           .from("User")
           .select("id")
-          .ilike("Email", session.user.email) // .ilike() é melhor que .eq(...toLowerCase())
+          .ilike("Email", sessionResult.data.session.user.email)
           .single();
         if (profile) setCurrentUserProfileId(profile.id);
       }
+
+      if (categoriesResult.data) setDbCategories(categoriesResult.data);
+      if (categoriesResult.error) console.error("Erro ao buscar categorias:", categoriesResult.error.message);
     }
-    getUserProfile();
+    loadInitialData();
   }, []);
 
-  // --- Buscar posts ---
-  // (Seu useEffect de buscar posts permanece igual)
   useEffect(() => {
     async function fetchPosts() {
       setLoadingPosts(true);
       let query = supabase
         .from("Posts")
         .select("id, created_at, description, like, comments, carTitle, carImage, carSpecs, User(username), Category(title)")
-        .order("created_at", { ascending: false });
+        .order("created_at", { ascending: false })
+        .limit(20);
 
       if (selectedCategory !== null) query = query.eq("category", selectedCategory);
 
       const { data, error } = await query;
       if (error) console.error("Erro ao buscar posts:", error.message);
-      else if (data) setPosts(data as any); // (Seu 'data' já é o tipo 'Posts[]')
+      else if (data) setPosts(data as Posts[]);
 
       setLoadingPosts(false);
     }
     fetchPosts();
   }, [selectedCategory]);
-
-  // --- Buscar categorias ---
-  // (Seu useEffect de buscar categorias permanece igual)
-  useEffect(() => {
-    async function fetchCategories() {
-      const { data, error } = await supabase.from("Category").select("*");
-      if (error) console.error("Erro ao buscar categorias:", error.message);
-      else if (data) setDbCategories(data);
-    }
-    fetchCategories();
-  }, []);
 
   // --- Abrir modal ---
   // (Sua função handleOpenCreateModal permanece igual)

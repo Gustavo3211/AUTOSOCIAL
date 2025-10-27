@@ -6,7 +6,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Upload, X, Rocket } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { supabase } from "@/superbase";
+import { supabase } from "@/supabase";
+import { useQuery } from "@tanstack/react-query";
 
 interface CreatePostModalProps {
   open: boolean;
@@ -19,10 +20,20 @@ type Category = {
   title: string;
 };
 
+const fetchCategories = async () => {
+  const { data, error } = await supabase.from("Category").select("id, title");
+  if (error) throw error;
+  return data as Category[];
+};
+
 export const CreatePostModal = ({ open, onOpenChange, currentUserProfileId }: CreatePostModalProps) => {
   const { toast } = useToast();
+  const { data: categories = [], isLoading: categoriesLoading } = useQuery({
+    queryKey: ["categories"],
+    queryFn: fetchCategories,
+    staleTime: 1000 * 60 * 10,
+  });
 
-  const [categories, setCategories] = useState<Category[]>([]);
   const [selectedCategory, setSelectedCategory] = useState<string>("");
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string>("");
@@ -32,24 +43,6 @@ export const CreatePostModal = ({ open, onOpenChange, currentUserProfileId }: Cr
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const bucketName = "posts";
-
-  // Buscar categorias do banco
-  useEffect(() => {
-    if (!open) return;
-
-    async function fetchCategories() {
-      const { data, error } = await supabase.from("Category").select("id, title");
-
-      if (error) {
-        console.error("Erro ao buscar categorias:", error.message);
-      } else if (data) {
-        console.log("Categorias carregadas:", data);
-        setCategories(data);
-      }
-    }
-
-    fetchCategories();
-  }, [open]);
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -148,16 +141,12 @@ export const CreatePostModal = ({ open, onOpenChange, currentUserProfileId }: Cr
 
       clearForm();
       onOpenChange(false);
-    } catch (err: any) {
-      console.log("bucketName:", bucketName); //logcolocado
-      
-      console.log("currentUserProfileId:", currentUserProfileId); // logcolocado
-      
-
-      console.error("Erro ao criar post:", err.message);
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : "Erro desconhecido";
+      console.error("Erro ao criar post:", errorMessage);
       toast({
         title: "Erro ao publicar",
-        description: err.message || "Houve um problema ao enviar seu post. Tente novamente.",
+        description: errorMessage || "Houve um problema ao enviar seu post. Tente novamente.",
         variant: "destructive"
       });
     } finally {
