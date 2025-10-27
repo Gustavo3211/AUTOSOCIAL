@@ -3,12 +3,14 @@ import { CategoryCard } from "@/components/CategoryCard";
 import { CarPost } from "@/components/CarPost";
 import { BottomNavigation } from "@/components/BottomNavigation";
 import { CreatePostModal } from "@/components/CreatePostModal";
-import { useEffect, useState } from "react";
+// 1. IMPORTAR MouseEvent
+import { useEffect, useState, MouseEvent } from "react";
 import { Button } from "@/components/ui/button";
 import { X } from "lucide-react";
 import { supabase } from "@/superbase";
 import { useNavigate } from "react-router-dom";
 
+// ... (Tipos Posts e DbCategory permanecem iguais) ...
 type Posts = {
   id: number;
   created_at: string;
@@ -40,14 +42,16 @@ const Index = () => {
   const navigate = useNavigate();
 
   // --- Auth ---
+  // (Seu useEffect de Auth permanece igual)
   useEffect(() => {
     async function getUserProfile() {
       const { data: { session } } = await supabase.auth.getSession();
       if (session?.user && session.user.email) {
+        // CORREÇÃO DE BUG (da outra vez): Use .ilike() para email
         const { data: profile } = await supabase
           .from("User")
           .select("id")
-          .eq("Email", session.user.email.toLowerCase())
+          .ilike("Email", session.user.email) // .ilike() é melhor que .eq(...toLowerCase())
           .single();
         if (profile) setCurrentUserProfileId(profile.id);
       }
@@ -56,6 +60,7 @@ const Index = () => {
   }, []);
 
   // --- Buscar posts ---
+  // (Seu useEffect de buscar posts permanece igual)
   useEffect(() => {
     async function fetchPosts() {
       setLoadingPosts(true);
@@ -68,7 +73,7 @@ const Index = () => {
 
       const { data, error } = await query;
       if (error) console.error("Erro ao buscar posts:", error.message);
-      else if (data) setPosts(data);
+      else if (data) setPosts(data as any); // (Seu 'data' já é o tipo 'Posts[]')
 
       setLoadingPosts(false);
     }
@@ -76,6 +81,7 @@ const Index = () => {
   }, [selectedCategory]);
 
   // --- Buscar categorias ---
+  // (Seu useEffect de buscar categorias permanece igual)
   useEffect(() => {
     async function fetchCategories() {
       const { data, error } = await supabase.from("Category").select("*");
@@ -86,14 +92,41 @@ const Index = () => {
   }, []);
 
   // --- Abrir modal ---
+  // (Sua função handleOpenCreateModal permanece igual)
   const handleOpenCreateModal = () => {
     if (currentUserProfileId) setIsCreateModalOpen(true);
     else alert("Você precisa estar logado para postar!");
   };
 
+  // 2. ADICIONAR ESTA FUNÇÃO
+  /**
+   * Navega para o post, a menos que o clique tenha sido em um elemento interativo
+   * (como um botão ou link) dentro do card.
+   */
+  const handlePostClick = (e: MouseEvent<HTMLDivElement>, postId: number) => {
+    let target = e.target as HTMLElement;
+
+    // Sobe pela árvore DOM verificando se o alvo (ou seus pais) é um botão/link
+    while (target && target !== e.currentTarget) {
+      if (
+        target.tagName === "BUTTON" ||
+        target.tagName === "A" ||
+        target.getAttribute("role") === "button"
+      ) {
+        // O clique foi em um botão/link, então NÃO navegue
+        return;
+      }
+      target = target.parentElement as HTMLElement;
+    }
+
+    // Se o loop terminar, o clique foi no card (e não em um botão). Navegue.
+    navigate(`/posts/${postId}`);
+  };
+
   return (
     <main className="min-h-screen bg-background pb-20">
       {/* Header */}
+      {/* (Seu Header permanece igual) */}
       <header className="sticky top-0 bg-background/95 backdrop-blur-md border-b border-border z-40 px-4 py-3">
         <div className="flex items-center justify-between max-w-lg mx-auto">
           <h1 className="text-xl font-bold bg-gradient-primary bg-clip-text text-transparent">AutoSocial</h1>
@@ -108,6 +141,7 @@ const Index = () => {
         <HeroSection onPostCarClick={handleOpenCreateModal} />
 
         {/* Categories */}
+        {/* (Sua seção de Categories permanece igual) */}
         <section className="mb-8">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-lg font-semibold text-foreground">Categorias</h2>
@@ -159,9 +193,10 @@ const Index = () => {
                 const categoryName = post.Category?.[0]?.title || "Sem Categoria";
 
                 return (
+                  // 3. ATUALIZAR O onClick AQUI
                   <div
                     key={post.id}
-                    onClick={() => navigate(`/posts/${post.id}`)}
+                    onClick={(e) => handlePostClick(e, post.id)} // <--- MUDANÇA AQUI
                     className="cursor-pointer hover:opacity-80 transition"
                   >
                     <CarPost
