@@ -181,7 +181,6 @@ const Index = () => {
         <section>
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-lg font-semibold text-foreground">Feed Principal</h2>
-            <button className="text-primary text-sm font-medium">Filtrar</button>
           </div>
 
           <div className="space-y-6">
