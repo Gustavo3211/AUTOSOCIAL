@@ -1,15 +1,22 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Header } from "@/components/Header";
 import { UserCard } from "@/components/UserCard";
-import { CommentItem } from "@/components/CommentItem";
+// 1. IMPORTAR O NOVO COMPONENTE E TIPO
+import { CommentItem, CommentData as CommentType } from "@/components/CommentItem";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Heart, MessageCircle, Share2, Send, Settings } from "lucide-react";
+import { Heart, MessageCircle, Share2, Send, Settings, X } from "lucide-react"; // Adicionado X
 import { BottomNavigation } from "@/components/BottomNavigation";
-import { supabase } from "@/superbase";
+import { supabase } from "@/superbase"; // (atenção: 'superbase' ou 'supabase'?)
+
+type UserSlim = {
+  username: string;
+  is_premium?: boolean;
+  avatar_url?: string;
+} | null;
 
 type PostDetailData = {
   id: number;
@@ -20,25 +27,15 @@ type PostDetailData = {
   carTitle: string;
   carImage: string;
   carSpecs: string;
-  User: {
-    username: string;
-    is_premium: boolean;
-  } | null;
-  Category: {
-    title: string;
-  } | null;
+  User: UserSlim;
+  Category: { title: string } | null;
 };
 
-type CommentData = {
-  id: number;
-  created_at: string;
-  content: string;
-  User: {
-    username: string;
-  } | null;
-};
+// 2. O TIPO AGORA É IMPORTADO DO COMPONENTE
+type CommentData = CommentType;
 
 export default function PostDetail() {
+
   const { id } = useParams();
   const navigate = useNavigate();
 
@@ -53,25 +50,115 @@ export default function PostDetail() {
   const [commentCount, setCommentCount] = useState(0);
   const [newComment, setNewComment] = useState("");
   const [isSubmittingComment, setIsSubmittingComment] = useState(false);
+useEffect(() => {
+    // 1. Só execute se NÃO estiver carregando E se o post existir
+    if (!loading && post && window.location.hash === '#comment-input') {
+      
+      // 2. Dê um pequeno delay para garantir que o DOM foi "pintado"
+      setTimeout(() => {
+        const inputElement = document.getElementById('comment-input');
+        if (inputElement) {
+          inputElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          inputElement.focus({ preventScroll: true }); // Adicionado preventScroll
+        }
+      }, 100); // 100ms é um delay seguro
+    }
+  }, [loading, post]); // 3. 👈 A MUDANÇA PRINCIPAL ESTÁ AQUI
+  // 3. NOVO ESTADO PARA GERENCIAR A RESPOSTA
+  const [replyingTo, setReplyingTo] = useState<CommentData | null>(null);
 
-  // 🔹 EFEITO 1: Identificar usuário autenticado
+  // Helper de normalização (do seu código, ótimo!)
+  const normalizeRelation = <T,>(val: any): T | null => {
+    if (val == null) return null;
+    if (Array.isArray(val)) return (val.length > 0 ? val[0] : null) as T | null;
+    return val as T;
+  };
+
+  // Efeito 1: usuário autenticado
   useEffect(() => {
     async function getUserProfile() {
-      const { data: { session } } = await supabase.auth.getSession();
+      const { data: sessionData } = await supabase.auth.getSession();
+      const session = (sessionData as any)?.session;
       if (session?.user?.email) {
+        // CORREÇÃO: Usar .ilike() para busca case-insensitive
         const { data: profile } = await supabase
           .from("User")
           .select("id")
-          .eq("Email", session.user.email.toLowerCase())
+          .ilike("Email", session.user.email) // <--- CORRIGIDO
           .single();
-        if (profile) setCurrentUserProfileId(profile.id);
+        if (profile) setCurrentUserProfileId((profile as any).id);
       }
       setIsAuthLoading(false);
     }
     getUserProfile();
   }, []);
 
-  // 🔹 EFEITO 2: Buscar post + comentários
+  // 4. LÓGICA DE BUSCAR COMENTÁRIOS (EXTRAÍDA PARA SER REUTILIZÁVEL)
+  // E ATUALIZADA PARA ANINHAR RESPOSTAS
+  const fetchComments = useCallback(async () => {
+    if (!id) return;
+
+    const { data, error } = await supabase
+      .from("post_comments")
+      .select(`
+        id,
+        created_at,
+        body,
+        parent_comment_id, 
+        User:user_id (
+          username,
+          avatar_url
+        )
+      `)
+      .eq("post_id", id)
+      .order("created_at", { ascending: true });
+
+    if (error) {
+      console.error("Erro ao buscar comentários:", error.message);
+      return;
+    }
+    if (!data) {
+      setCommentsList([]);
+      return;
+    }
+
+    // Lógica para aninhar comentários
+    const commentMap = new Map<number, CommentData>();
+    const parentComments: CommentData[] = [];
+
+    const allComments: CommentData[] = (data as any[]).map((c: any) => {
+      const normalizedUser = normalizeRelation<{ username: string; avatar_url?: string }>(c.User);
+      return {
+        id: Number(c.id),
+        created_at: c.created_at,
+        content: String(c.body ?? c.content ?? ""),
+        parent_comment_id: c.parent_comment_id ? Number(c.parent_comment_id) : null,
+        User: normalizedUser,
+        replies: [], // Inicializa replies
+      };
+    });
+
+    // Popula o map
+    allComments.forEach((comment) => {
+      commentMap.set(comment.id, comment);
+    });
+
+    // Aninha os comentários
+    allComments.forEach((comment) => {
+      if (comment.parent_comment_id !== null) {
+        const parent = commentMap.get(comment.parent_comment_id);
+        if (parent) {
+          parent.replies.push(comment);
+        }
+      } else {
+        parentComments.push(comment);
+      }
+    });
+
+    setCommentsList(parentComments);
+  }, [id]); // Depende do ID do post
+
+  // Efeito 2: buscar post + comentários
   useEffect(() => {
     if (!id) {
       setLoading(false);
@@ -79,90 +166,109 @@ export default function PostDetail() {
     }
 
     async function fetchPost() {
+      // (Seu código de fetchPost - está ótimo, sem mudanças)
+      // ... (vou colar seu código aqui para ficar completo)
       const { data, error } = await supabase
         .from("Posts")
         .select(`
-          id, created_at, description, like, comments,
-          carTitle, carImage, carSpecs,
-          User ( username, is_premium ),
-          Category ( title )
+          id,
+          created_at,
+          description,
+          like,
+          comments,
+          carTitle,
+          carImage,
+          carSpecs,
+          User:user_id (
+            username,
+            is_premium
+          ),
+          Category:category (
+            title
+          )
         `)
         .eq("id", id)
         .single();
 
-      if (!error && data) {
-        setPost({
-          ...data,
-          User: data.User || null,
-          Category: data.Category || null,
-        });
-        setLikeCount(data.like);
-        setCommentCount(data.comments);
-      } else {
-        console.error("Erro ao buscar post:", error?.message);
+      if (error) {
+        console.error("Erro ao buscar post:", error.message);
+        return;
       }
-    }
-
-    async function fetchComments() {
-      const { data, error } = await supabase
-        .from("post_comments")
-        .select(`
-          id, created_at, content,
-          User ( username, avatar_url )
-        `)
-        .eq("post_id", id)
-        .order("created_at", { ascending: true });
-
-      if (!error && data) {
-        setCommentsList(
-          data.map((comment) => ({
-            ...comment,
-            User: comment.User || null,
-          }))
-        );
-      } else {
-        console.error("Erro ao buscar comentários:", error?.message);
-      }
+      if (!data) return;
+      const normalizedUser = normalizeRelation<{ username: string; is_premium?: boolean }>(data.User);
+      const normalizedCategory = normalizeRelation<{ title: string }>(data.Category);
+      const carImage = data.carImage ?? data.carImage ?? "";
+      const carTitle = data.carTitle ?? data.carTitle ?? (data.title ?? "");
+      const postObj: PostDetailData = {
+        id: Number(data.id),
+        created_at: data.created_at,
+        description: data.description ?? "",
+        like: Number(data.like ?? 0),
+        comments: Number(data.comments ?? 0),
+        carTitle: String(carTitle),
+        carImage: String(carImage),
+        carSpecs: String(data.carSpecs ?? data.carSpecs ?? ""),
+        User: normalizedUser,
+        Category: normalizedCategory,
+      };
+      setPost(postObj);
+      setLikeCount(postObj.like);
+      setCommentCount(postObj.comments);
     }
 
     async function load() {
       setLoading(true);
+      // Chama as duas funções
       await Promise.all([fetchPost(), fetchComments()]);
       setLoading(false);
     }
     load();
-  }, [id]);
+  }, [id, fetchComments]); // Adiciona fetchComments à dependência
 
-  // 🔹 EFEITO 3: Verificar se o post já foi curtido
+  // Efeito 3: checar like inicial
   useEffect(() => {
     if (isAuthLoading || !post || !currentUserProfileId) return;
     async function checkInitialLike() {
       const { data } = await supabase
         .from("post_likes")
         .select("id")
-        .match({ post_id: post.id, user_id: currentUserProfileId })
+        .match({ post_id: post!.id, user_id: currentUserProfileId })
         .single();
       setIsLiked(!!data);
     }
     checkInitialLike();
   }, [post, currentUserProfileId, isAuthLoading]);
 
-  // 🔸 FUNÇÕES DE INTERAÇÃO
+  // Interações
   const handleLike = async () => {
     if (!currentUserProfileId) return navigate("/perfil");
     if (!post) return;
 
-    setIsLiked(!isLiked);
-    setLikeCount((c) => (isLiked ? c - 1 : c + 1));
+    // 5. CORREÇÃO DA LÓGICA DE LIKE (COM RPC)
+    // Atualização otimista (faz a UI responder antes do DB)
+    const wasLiked = isLiked;
+    setIsLiked(!wasLiked);
+    setLikeCount((c) => (wasLiked ? c - 1 : c + 1));
 
-    if (isLiked) {
-      await supabase.from("post_likes").delete().match({ post_id: post.id, user_id: currentUserProfileId });
+    // Chama a função RPC
+    const { data: newLikeCount, error } = await supabase.rpc("toggle_like", {
+      post_id_input: post.id,
+      user_id_input: currentUserProfileId,
+    });
+
+    if (error) {
+      console.error("Erro ao curtir:", error);
+      // Reverte a UI otimista se der erro
+      setIsLiked(wasLiked);
+      setLikeCount((c) => (wasLiked ? c + 1 : c - 1));
     } else {
-      await supabase.from("post_likes").insert({ post_id: post.id, user_id: currentUserProfileId });
+      // Sincroniza com a contagem real do DB (retornada pela RPC)
+      setLikeCount(newLikeCount);
     }
   };
 
   const handleShare = async () => {
+    // (Seu código, sem mudanças)
     if (!post) return;
     if (navigator.share) {
       await navigator.share({
@@ -173,30 +279,52 @@ export default function PostDetail() {
     }
   };
 
+  // 6. FUNÇÃO DE SUBMETER COMENTÁRIO (ATUALIZADA)
   const handleCommentSubmit = async () => {
     if (!currentUserProfileId) return navigate("/perfil");
     if (!post || newComment.trim() === "") return;
 
     setIsSubmittingComment(true);
-    const { error } = await supabase
-      .from("post_comments")
-      .insert({ post_id: post.id, user_id: currentUserProfileId, content: newComment.trim() });
 
-    if (!error) {
-      const { data } = await supabase
-        .from("post_comments")
-        .select(`id, created_at, content, User ( username )`)
-        .eq("post_id", post.id)
-        .order("created_at", { ascending: true });
+    // Insere o comentário, definindo 'parent_comment_id' se for uma resposta
+    const { error: insertError } = await supabase.from("post_comments").insert({
+      post_id: post.id,
+      user_id: currentUserProfileId,
+      body: newComment.trim(),
+      parent_comment_id: replyingTo ? replyingTo.id : null, // <--- LÓGICA DA RESPOSTA
+    });
 
-      if (data) setCommentsList(data);
+    if (!insertError) {
+      // Limpa a UI
       setNewComment("");
-      setCommentCount((c) => c + 1);
+      setReplyingTo(null); // Limpa o estado de resposta
+
+      // Recarrega a lista de comentários (agora aninhada)
+      await fetchComments();
+
+      // Atualiza o contador total na tabela 'Posts' usando a RPC
+      const { data: newCommentCount, error: rpcError } = await supabase.rpc(
+        "update_comment_count",
+        { post_id_input: post.id }
+      );
+
+      if (!rpcError) {
+        setCommentCount(newCommentCount); // Sincroniza o contador
+      }
+    } else {
+      console.error("Erro ao inserir comentário:", insertError.message);
     }
     setIsSubmittingComment(false);
   };
 
-  // 🔹 RENDERIZAÇÃO
+  // 7. FUNÇÃO PARA INICIAR A RESPOSTA
+  const handleStartReply = (comment: CommentData) => {
+    setReplyingTo(comment);
+    // (Opcional) Focar no input
+    document.getElementById("comment-input")?.focus();
+  };
+
+  // Render
   if (loading)
     return (
       <div className="min-h-screen bg-background pb-32 flex items-center justify-center text-muted-foreground">
@@ -211,29 +339,25 @@ export default function PostDetail() {
       </div>
     );
 
-  const specs = post.carSpecs.split("•").map((s) => s.trim());
+  const specs = post.carSpecs ? post.carSpecs.split("•").map((s) => s.trim()) : [];
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-carbon-black via-carbon-gray/80 to-black text-foreground pb-32">
       <Header showBack />
 
-      {/* Hero */}
       <div className="relative w-full aspect-video">
-        <img
-          src={post.carImage}
-          alt={post.carTitle}
-          className="w-full h-full object-cover"
-        />
+        <img src={post.carImage} alt={post.carTitle} className="w-full h-full object-cover" />
         <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent" />
       </div>
 
       <div className="max-w-lg mx-auto px-4 space-y-6">
         <UserCard
           username={post.User?.username || "Usuário"}
-          avatar={post.User?.username}
+          avatar={post.User?.avatar_url || post.User?.username || ""} // Use avatar_url se existir
           isPremium={post.User?.is_premium || false}
         />
 
+        {/* (Seu JSX de Detalhes, Card, Interações... sem mudanças) */}
         <div className="space-y-3">
           <div className="flex items-center gap-2">
             <h1 className="text-2xl font-bold bg-gradient-to-r from-orange-400 via-amber-400 to-yellow-300 bg-clip-text text-transparent drop-shadow-[0_0_8px_hsl(35_100%_60%_/_0.3)]">
@@ -245,7 +369,6 @@ export default function PostDetail() {
           </div>
           <p className="text-white/80 leading-relaxed">{post.description}</p>
         </div>
-
         <Card className="p-4 bg-gradient-to-br from-carbon-gray/60 to-carbon-black border border-orange-500/20 shadow-[0_4px_30px_hsl(25_100%_40%_/_0.25)]">
           <div className="flex items-center gap-2 mb-3">
             <Settings className="h-5 w-5 text-amber-400" />
@@ -260,38 +383,23 @@ export default function PostDetail() {
             ))}
           </div>
         </Card>
-
-        {/* Interações */}
         <div className="flex items-center justify-around py-4 border-t border-border/50">
-          <Button
-            variant="ghost"
-            onClick={handleLike}
-            disabled={isAuthLoading}
-            className="flex items-center gap-2 group"
-          >
+          <Button variant="ghost" onClick={handleLike} disabled={isAuthLoading} className="flex items-center gap-2 group">
             <div
               className={`h-12 w-12 rounded-full flex items-center justify-center transition-all ${
-                isLiked
-                  ? "bg-gradient-to-br from-orange-500 to-amber-500 shadow-[0_0_15px_hsl(25_100%_50%_/_0.4)]"
-                  : "bg-card/40 border border-orange-500/30 hover:bg-card/60"
+                isLiked ? "bg-gradient-to-br from-orange-500 to-amber-500 shadow-[0_0_15px_hsl(25_100%_50%_/_0.4)]" : "bg-card/40 border border-orange-500/30 hover:bg-card/60"
               }`}
             >
-              <Heart
-                className={`h-5 w-5 ${
-                  isLiked ? "text-white fill-white" : "text-orange-400"
-                }`}
-              />
+              <Heart className={`h-5 w-5 ${isLiked ? "text-white fill-white" : "text-orange-400"}`} />
             </div>
             <span className="font-semibold text-white">{likeCount}</span>
           </Button>
-
           <Button variant="ghost" className="flex items-center gap-2">
             <div className="h-12 w-12 rounded-full bg-card/40 border border-amber-500/30 flex items-center justify-center hover:bg-card/60 transition-all">
               <MessageCircle className="h-5 w-5 text-amber-400" />
             </div>
             <span className="font-semibold text-white">{commentCount}</span>
           </Button>
-
           <Button variant="ghost" onClick={handleShare}>
             <div className="h-12 w-12 rounded-full bg-card/40 border border-orange-400/30 flex items-center justify-center hover:bg-card/60 transition-all">
               <Share2 className="h-5 w-5 text-orange-400" />
@@ -299,44 +407,59 @@ export default function PostDetail() {
           </Button>
         </div>
 
-        {/* Comentários */}
+        {/* 8. RENDERIZAÇÃO DOS COMENTÁRIOS ATUALIZADA */}
         <div className="space-y-3 pb-6">
           <h2 className="text-xl font-bold text-white">Comentários ({commentCount})</h2>
           {commentsList.length > 0 ? (
             commentsList.map((comment) => (
               <CommentItem
                 key={comment.id}
-                username={comment.User?.username || "Usuário"}
-                avatar={comment.User?.username}
-                comment={comment.content}
-                timestamp={comment.created_at}
-                likes={0}
+                comment={comment}
+                onStartReply={handleStartReply} // Passa a função
               />
             ))
           ) : (
-            <p className="text-sm text-muted-foreground text-center py-4">
-              Seja o primeiro a comentar!
-            </p>
+            <p className="text-sm text-muted-foreground text-center py-4">Seja o primeiro a comentar!</p>
           )}
         </div>
 
-        {/* Campo de comentário */}
-        <div className="flex gap-2 border-t border-orange-500/20 pt-4 mb-4">
-          <Input
-            placeholder="Adicione um comentário..."
-            value={newComment}
-            onChange={(e) => setNewComment(e.target.value)}
-            className="flex-1 bg-card/30 border border-orange-500/20 text-white placeholder:text-white/50"
-            disabled={isSubmittingComment}
-          />
-          <Button
-            size="icon"
-            className="bg-gradient-to-r from-orange-500 to-amber-500 hover:scale-105 shadow-[0_0_15px_hsl(25_100%_50%_/_0.4)] transition-transform"
-            onClick={handleCommentSubmit}
-            disabled={isSubmittingComment || newComment.trim() === ""}
-          >
-            {isSubmittingComment ? "..." : <Send className="h-4 w-4 text-white" />}
-          </Button>
+        {/* 9. CAMPO DE COMENTÁRIO ATUALIZADO */}
+        <div className="space-y-2 mb-4">
+          {/* Mostra a quem você está respondendo */}
+          {replyingTo && (
+            <div className="flex justify-between items-center text-sm px-2">
+              <span className="text-muted-foreground">
+                Respondendo a <span className="text-amber-400">{replyingTo.User?.username}</span>
+              </span>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-6 w-6 text-muted-foreground"
+                onClick={() => setReplyingTo(null)}
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
+          )}
+
+          <div className="flex gap-2 border-t border-orange-500/20 pt-4">
+            <Input
+              id="comment-input" // ID para o foco
+              placeholder={replyingTo ? "Escreva sua resposta..." : "Adicione um comentário..."}
+              value={newComment}
+              onChange={(e) => setNewComment(e.target.value)}
+              className="flex-1 bg-card/30 border border-orange-500/20 text-white placeholder:text-white/50"
+              disabled={isSubmittingComment}
+            />
+            <Button
+              size="icon"
+              className="bg-gradient-to-r from-orange-500 to-amber-500 hover:scale-105 shadow-[0_0_15px_hsl(25_100%_50%_/_0.4)] transition-transform"
+              onClick={handleCommentSubmit}
+              disabled={isSubmittingComment || newComment.trim() === ""}
+            >
+              {isSubmittingComment ? "..." : <Send className="h-4 w-4 text-white" />}
+            </Button>
+          </div>
         </div>
       </div>
 
