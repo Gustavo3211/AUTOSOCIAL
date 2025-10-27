@@ -21,7 +21,7 @@ export const HeroSection = ({ onPostCarClick }: HeroSectionProps) => {
             Bem-vindo ao AutoGRID
           </h1>
           <p className="text-white/90 text-sm mb-4 drop-shadow">
-            A maior rede social automotiva do Brasil. Compartilhe sua paixão por carros.
+            A primeira rede social automotiva do Brasil. Compartilhe sua paixão por carros.
           </p>
           <div className="flex space-x-3">
 
