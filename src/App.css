@@ -1,0 +1,98 @@
+/*
+  ================================================================
+  1. RESET E PADRÕES GLOBAIS
+  ================================================================
+*/
+
+/* * Muda o box-sizing para ser mais intuitivo. 
+ * 'border-box' faz com que 'padding' e 'border' sejam incluídos
+ * na largura (width) e altura (height) total do elemento.
+ * Esta é a maior e melhoria de consistência que você pode fazer.
+*/
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+/*
+ * Reseta a margem do body e define padrões de fonte para o app todo.
+ * Nós removemos 'text-align: center' daqui. O padrão (esquerda)
+ * é muito mais consistente para um app.
+*/
+body {
+  margin: 0;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto,
+    Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  
+  /* * Defina suas cores GLOBAIS aqui. 
+   * Ex: Cores do seu tema 'carbon'
+  */
+  /* background-color: #1a1a1a; */
+  /* color: rgba(255, 255, 255, 0.87); */
+}
+
+/*
+ * Garante que o app e o body possam ocupar 100% da altura da tela.
+ * Nós removemos 'max-width', 'margin: auto' e 'padding' do #root.
+ * O #root deve apenas "montar" seu app, sem forçar um layout.
+*/
+html,
+body,
+#root {
+  height: 100%;
+}
+
+/*
+  ================================================================
+  2. ESTILOS DE DEMONSTRAÇÃO REMOVIDOS
+  ================================================================
+*/
+
+/*
+ * As classes .logo, .logo:hover, .logo.react:hover, .card, 
+ * .read-the-docs e a animação @keyframes logo-spin foram REMOVIDAS.
+ *
+ * MOTIVO: Elas são específicas dos componentes de demonstração 
+ * do Vite (o logo do React e o botão de contador).
+ *
+ * Para manter a consistência, estilos de componentes (como seu
+ * <Header> ou <UserCard>) devem ficar em seus próprios arquivos 
+ * CSS (ex: Header.css) ou, melhor ainda, em CSS Modules 
+ * (ex: Header.module.css). 
+ *
+ * Manter estilos de componentes no CSS global causa conflitos
+ * e inconsistências.
+*/
+
+/*
+  ================================================================
+  3. (OPCIONAL) CLASSE DE LAYOUT UTILITÁRIA
+  ================================================================
+*/
+
+/* * Em vez de forçar #root a ter uma largura máxima, crie uma
+ * classe utilitária 'container'. Você pode aplicar esta classe
+ * nas páginas ou seções onde você QUER limitar o conteúdo.
+ *
+ * <div className="container">
+ * ...seu conteúdo...
+ * </div>
+ *
+ * Isso lhe dá flexibilidade para ter seções em tela cheia
+ * (como a imagem do seu PostDetail) e seções centralizadas.
+*/
+.container {
+  width: 100%;
+  max-width: 1280px; /* A largura máxima do seu #root original */
+  margin-left: auto;
+  margin-right: auto;
+  
+  /* Usamos padding lateral para evitar que o conteúdo
+     cole nas bordas em telas pequenas */
+  padding-left: 1.5rem;
+  padding-right: 1.5rem;
+}
